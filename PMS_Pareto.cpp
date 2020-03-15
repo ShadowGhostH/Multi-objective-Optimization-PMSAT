@@ -175,7 +175,7 @@ private:
 	int apply_transform(Formula &, int);// applies the value of the literal
 	void display(Formula &, int);	// display the result
     int PMSAT(Formula, int);        // performs branch and bound methods recursively
-    int judge_formula(Formula, Formula);// judge domainate relationship between formulas 
+    int judge_pareto(Formula, Formula);// judge domainate relationship between formulas 
     
     // performs remove satisfied clauses or unsatisfied clauses
     int judge_clause(Formula &, int &, int &, int &, bool);
@@ -307,8 +307,21 @@ int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
  * 
  */
 
-int PMSATSolver::judge_formula(Formula f1, Formula f2){
-    return nondomainated;
+int PMSATSolver::judge_pareto(Formula f1, Formula f2) {
+    int cnt1 =0, cnt2 = 0;
+    for(int i = 0; i < cost_category_count; i++){
+        if(f1.opt_cost[i] >= f2.opt_cost[i]) cnt1++;
+        if(f1.opt_cost[i] <= f2.opt_cost[i]) cnt2++;
+    }
+    if(cnt1 == cost_category_count && cnt2 == cost_category_count){
+        return Cat::nondomainated;
+    } else if(cnt1 == cost_category_count){
+        return Cat::domainating;
+    } else if(cnt2 == cost_category_count){
+        return Cat::domainated;
+    } else {
+        return nondomainated;
+    }
 }
 
 int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
