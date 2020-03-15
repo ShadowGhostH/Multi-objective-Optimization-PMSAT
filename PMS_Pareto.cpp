@@ -16,11 +16,17 @@ const int inf = 0x3f3f3f3f; // value of infinite
  * enum for different types of return flags defined
  */
 enum Cat {
-    satisfied,   // when a satisfying assignment has been found
-    unsatisfied, // when no satisfying assignment has been found after
-			     // exhaustively searching
-    normal		 // when no satisfying assignment has been found till now, and DPLL()
-				 // has exited normally
+    // in PMSAT Function as unit_propagate and apply_transform 
+    satisfied,  // when a satisfying assignment has been found
+    unsatisfied,// when no satisfying assignment has been found after
+			    // exhaustively searching
+    normal,		// when no satisfying assignment has been found till now, and DPLL()
+				// has exited normally
+    
+    // in Pareto Function to represent domainate relationship
+    domainating,    // A domainate B
+    domainated,     // A is domainted by B
+    nondomainated,  // there is none domainated relationship between A and B
 };
 
 /*
@@ -51,14 +57,17 @@ public:
 
     // last version regarded the cost of each clause as 1
     // In this version, we use soft_clause_cost to store the cost of each soft clause
-    vector<int> soft_clause_cost;
+    vector<vector<int> > soft_clause_cost;
 
-    // int to sore the number of optimal soft clauses cost in every branch
+    // vector to sore the number of optimal soft clauses cost in every branch
     // if formula is satisified
-    int opt_cost;
-    
-    // int to store the num of sum of removed soft clauses cost
-    int remove_cost;
+    vector<int> opt_cost;
+
+    // vector to store the num of sum of removed soft clauses cost
+    vector<int> remove_cost;
+
+    // the number of sum of soft clause in the formula
+    vector<int> sum_soft_cost;              
 
     Formula() {}
 
@@ -75,15 +84,15 @@ public:
     }
 
     // set the vectors to their appropriate sizes and initial values
-    void initialize(int, int, int);
+    void initialize(int, int, int, int);
     
     // set the literate over the clauses
-    void input(int, int, int &);
+    void input(int, int, int);
 };
 
 
 void Formula:: initialize(int literal_count, int hard_clause_count, 
-        int soft_clause_count){
+        int soft_clause_count, int cost_category_count){
     
     literals.clear();					// vector for literal
     literals.resize(literal_count, -1); 
@@ -101,21 +110,29 @@ void Formula:: initialize(int literal_count, int hard_clause_count,
     literal_polarity.resize(literal_count, 0);
     
     soft_clause_cost.clear();
-    soft_clause_cost.resize(soft_clause_count, 0);
+    soft_clause_cost.resize(cost_category_count);
+    for(int i = 0; i < cost_category_count; i++){
+        soft_clause_cost[i].resize(cost_category_count);
+    }
     
-    opt_cost = remove_cost = 0; 
+    opt_cost.clear();
+    opt_cost.resize(cost_category_count, 0);
+
+    remove_cost.clear(); 
+    remove_cost.resize(cost_category_count, 0);
 }
 
-void Formula::input(int hard_clause_count, int soft_clause_count, int &sum_soft_cost){
+void Formula::input(int hard_clause_count, int soft_clause_count, int cost_category_count){
     int literal; // store the incoming literal value
     // a array that store clause count  
     // 0 - hard clause 1 - soft clause
     int count[2] = {hard_clause_count, soft_clause_count}; 
-    sum_soft_cost = 0;
     
-    for(int i = 0; i < soft_clause_count; i++){
-        cin >> soft_clause_cost[i];   // cost of each soft clause
-        sum_soft_cost += soft_clause_cost[i];
+    for(int i = 0; i < cost_category_count; i++) {
+        for(int j = 0; j < soft_clause_count; j++){
+            cin >> soft_clause_cost[i][j];   // cost of each soft clause
+            sum_soft_cost[i] += soft_clause_cost[i][j];
+        }
     }
     
     for (int p = 0; p < 2; p++) { // point for hard or soft clause
@@ -152,13 +169,16 @@ private:
 	Formula formula;			    // the initial hard and soft formula
 	int hard_clause_count;			// the number of hard clauses in the formula
 	int soft_clause_count;			// the number of soft clauses in the formula
-    int sum_soft_cost;              // the number of sum of soft clause in the formula
+    int cost_category_count;        // the bumber of cost categories in the formula
 	
 	int unit_propagate(Formula &);	// performs unit propagation
-	int DPLL(Formula);				// performs DPLL recursively
 	int apply_transform(Formula &, int);// applies the value of the literal
-	void display(Formula &, int, int);	// display the result
+	void display(Formula &, int);	// display the result
     int PMSAT(Formula, int);        // performs branch and bound methods recursively
+    int judge_formula(Formula, Formula);// judge domainate relationship between formulas 
+    
+    // performs remove satisfied clauses or unsatisfied clauses
+    int judge_clause(Formula &, int &, int &, int &, bool);
 
 public:
 	PMSATSolver() {}
@@ -186,10 +206,12 @@ void PMSATSolver::initialize() {
     cin >> literal_count;
     cin >> hard_clause_count;
 	cin >> soft_clause_count;
+    cin >> cost_category_count;
 
-	formula.initialize(literal_count, hard_clause_count, soft_clause_count);
+	formula.initialize(literal_count, hard_clause_count, soft_clause_count,
+            cost_category_count);
 	
-	formula.input(hard_clause_count, soft_clause_count, sum_soft_cost);
+	formula.input(hard_clause_count, soft_clause_count, cost_category_count);
 }
 
 /*
@@ -262,39 +284,15 @@ int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
                 // positive if assigned false, it appears negative, in this clause 
                 // hence, the clause has now become true
                 if ((2 * literal_to_apply + value_to_apply) == f.clauses[p][i][j]) {
-                    // remove the clause from the list
-                    f.clauses[p].erase(f.clauses[p].begin() + i); 
-                    if (p == 1){  // soft clause
-                        // add clause cost to opt_cost
-                        f.opt_cost += f.soft_clause_cost[i];
-                        // remove the clause cost from the list
-                        f.soft_clause_cost.erase(f.soft_clause_cost.begin() + i);
-                    }
-                    i--;                // reset iterator
-                    // if all hard and soft clauses have been removed
-                    if (f.clauses[0].size() == 0 && f.clauses[1].size() == 0 ) { 
-                        return Cat::satisfied;  // the formula is satisfied
+                    int judge_result = judge_clause(f, p, i, j, true);
+                    if(judge_result == Cat::satisfied) {
+                        return judge_result;
                     }
                     break; // move to the next clause
                 } else if (f.clauses[p][i][j] / 2 == literal_to_apply) {
-                    // the literal appears with opposite polarity 
-                    // remove the literal from the clause, as it is false in it
-                    f.clauses[p][i].erase(f.clauses[p][i].begin() + j); 
-                    j--;    // reset the iterator
-                    if (f.clauses[p][i].size() == 0) {
-                        if(p == 0){
-                            // if the hard clause is empty
-                            // formula is unsatisfiable currently
-                            return Cat::unsatisfied;
-                         }  else {
-                            // remove the clause from list
-                            f.clauses[p].erase(f.clauses[p].begin() + i);
-                            // add clause cost to remove cost
-                            f.remove_cost += f.soft_clause_cost[i];
-                            // remove the clause cost from the list
-                            f.soft_clause_cost.erase(f.soft_clause_cost.begin() + i);
-                            i--;
-                        }
+                    int judge_result = judge_clause(f, p, i, j, false);
+                    if(judge_result == Cat::unsatisfied){
+                        return judge_result;
                     }
                     break; // move to the next clause
                 }
@@ -305,7 +303,62 @@ int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
     return Cat::normal;
 }
 
-void PMSATSolver::display(Formula &f, int result, int ans) {
+/*
+ * 
+ */
+
+int PMSATSolver::judge_formula(Formula f1, Formula f2){
+    return nondomainated;
+}
+
+int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
+    if(flag){
+        // remove the clause from the list
+        f.clauses[p].erase(f.clauses[p].begin() + i); 
+        if (p == 1){  // soft clause
+            for(int k = 0; k < cost_category_count; k++){
+                // add clause cost to opt_cost
+                f.opt_cost[k] += f.soft_clause_cost[k][i];
+                // remove the clause cost from the list
+                f.soft_clause_cost.erase(f.soft_clause_cost.begin() + i);
+            }
+        }
+        i--;                // reset iterator
+        // if all hard and soft clauses have been removed
+        if (f.clauses[0].size() == 0 && f.clauses[1].size() == 0 ) { 
+            return Cat::satisfied;  // the formula is satisfied
+        }
+    } else {
+        // the literal appears with opposite polarity 
+        // remove the literal from the clause, as it is false in it
+        f.clauses[p][i].erase(f.clauses[p][i].begin() + j); 
+        j--;    // reset the iterator
+        if (f.clauses[p][i].size() == 0) {
+            if(p == 0){
+                // if the hard clause is empty
+                // formula is unsatisfiable currently
+                return Cat::unsatisfied;
+            }  else {
+                for(int k = 0; k < cost_category_count; k++){
+                    // remove the clause from list
+                    f.clauses[p].erase(f.clauses[p].begin() + i);
+                    // add clause cost to remove cost
+                    f.remove_cost[k] += f.soft_clause_cost[k][i];
+                    // remove the clause cost from the list
+                    f.soft_clause_cost.erase(f.soft_clause_cost.begin() + i);
+                    i--;
+                }
+            }
+        }
+
+    }
+    return Cat::normal;
+}
+/*
+ * Function to display literal satisfied or unsatisfied
+ * arguments: f - formula 
+ */
+void PMSATSolver::display(Formula &f, int result) {
     cout << endl << "******** display ***********" << endl;
     if (result == Cat::satisfied) { // if the formula is satisfiable
         cout << "SAT" << endl;
@@ -322,7 +375,6 @@ void PMSATSolver::display(Formula &f, int result, int ans) {
             }
         }
         cout << " 0" << endl; 
-        cout << ans << endl;
     } else { // if the formula is unsatisfiable
         cout << "UNSAT";
     }
@@ -340,16 +392,17 @@ int PMSATSolver::PMSAT(Formula f, int lower_bound){
     // purning process
 	// lower_bound is the optimalcomplete solution initialized to -inf
 	// upper_bound is number of empty clause in f at most
-    int upper_bound = sum_soft_cost - f.remove_cost;
-    if(upper_bound <= lower_bound) return lower_bound;
+    // int upper_bound = ;
+    // if(upper_bound <= lower_bound) return lower_bound;
    
     int result = unit_propagate(f); // perform unit propagation on the formula 
     // to store empty soft clause number
     
     if(result == Cat::satisfied) {  // if satisfied, show result and return
-        int ans = f.opt_cost;
-        display(f, result, ans);
-        return ans;         // answer is lower bound 
+        // int ans = f.opt_cost;
+        display(f, result);
+        // return ans;         // answer is lower bound 
+        return Cat::satisfied;
     } else if(result == Cat::unsatisfied) { // if hard clauses not satisfied
         return -inf;                // return -inf
     }
@@ -366,13 +419,13 @@ int PMSATSolver::PMSAT(Formula f, int lower_bound){
         new_f.literal_frequency[i] = -1; 
         // reset the frequency to -1 to ignore in the future
         int transform_result = apply_transform(new_f, i); 
-        int ret = new_f.opt_cost;
+        // int ret = new_f.opt_cost;
         // apply the change to all the clauses
         if (transform_result == Cat::satisfied) { 
             // if formula satisfied both hard and soft clause
             // meas all literal has been selected
-            display(new_f, transform_result, ret);
-            lower_bound = max(lower_bound, ret);
+            display(new_f, transform_result);
+            // lower_bound = max(lower_bound);
         } else if (transform_result == Cat::unsatisfied) { 
             // if formula not satisfied in this branch, return inf 
             lower_bound = max(lower_bound, -inf); // just for completement
