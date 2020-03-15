@@ -170,12 +170,14 @@ private:
 	int hard_clause_count;			// the number of hard clauses in the formula
 	int soft_clause_count;			// the number of soft clauses in the formula
     int cost_category_count;        // the bumber of cost categories in the formula
+    vector<Formula> pareto_front;   // preto front set
 	
 	int unit_propagate(Formula &);	// performs unit propagation
 	int apply_transform(Formula &, int);// applies the value of the literal
 	void display(Formula &, int);	// display the result
-    int PMSAT(Formula, int);        // performs branch and bound methods recursively
+    void PMSAT(Formula);        // performs branch and bound methods recursively
     int judge_pareto(Formula, Formula);// judge domainate relationship between formulas 
+    void add_answer(Formula);
     
     // performs remove satisfied clauses or unsatisfied clauses
     int judge_clause(Formula &, int &, int &, int &, bool);
@@ -367,6 +369,23 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
     }
     return Cat::normal;
 }
+
+void PMSATSolver::add_answer(Formula f){
+    bool flag = true;
+    for(int i  = 0; i < pareto_front.size(); i++) {
+        int judge_result = judge_pareto(f, pareto_front[i]);
+        if(judge_result == Cat::domainating) {
+            pareto_front.erase(pareto_front.begin() + i);
+            i--;
+        } else if(judge_result == Cat::domainated){
+            flag = false;
+        }
+    }
+    if(flag == true){
+        pareto_front.push_back(f);
+    }
+}
+
 /*
  * Function to display literal satisfied or unsatisfied
  * arguments: f - formula 
@@ -401,7 +420,7 @@ void PMSATSolver::display(Formula &f, int result) {
  * return value: int - value of optimal complete solution
  *               inf - no satisfiable solution
  */
-int PMSATSolver::PMSAT(Formula f, int lower_bound){
+void PMSATSolver::PMSAT(Formula f){
     // purning process
 	// lower_bound is the optimalcomplete solution initialized to -inf
 	// upper_bound is number of empty clause in f at most
@@ -415,9 +434,10 @@ int PMSATSolver::PMSAT(Formula f, int lower_bound){
         // int ans = f.opt_cost;
         display(f, result);
         // return ans;         // answer is lower bound 
-        return Cat::satisfied;
+        add_answer(f); 
+        return;
     } else if(result == Cat::unsatisfied) { // if hard clauses not satisfied
-        return -inf;                // return -inf
+        return;                // return -inf
     }
     
     // find the variable with maximum frequency in f, which will be the next to be
@@ -438,25 +458,24 @@ int PMSATSolver::PMSAT(Formula f, int lower_bound){
             // if formula satisfied both hard and soft clause
             // meas all literal has been selected
             display(new_f, transform_result);
+            add_answer(new_f);
             // lower_bound = max(lower_bound);
-        } else if (transform_result == Cat::unsatisfied) { 
-            // if formula not satisfied in this branch, return inf 
-            lower_bound = max(lower_bound, -inf); // just for completement
         } 
-        else {
-            // after apply, there is not either satisfied or unsatisfied
-            // recursively call PMSAT on the new formula
-            // to update upper_bound
-            lower_bound = max(lower_bound, PMSAT(new_f, lower_bound));
-        }
+        // else if (transform_result == Cat::unsatisfied) { 
+        //    // if formula not satisfied in this branch, return inf     
+        // } 
+        // else {
+        //     // after apply, there is not either satisfied or unsatisfied
+        //     // recursively call PMSAT on the new formula
+        //     // to update upper_bound
+        //    lower_bound = max(lower_bound, PMSAT(new_f, lower_bound));
+        //}
     }
-    return lower_bound;
+    // return lower_bound;
 }
 
 void PMSATSolver::solve(){
-    int result = PMSAT(formula, -inf);
-    if(result == -inf) cout << "UNSAT" << endl;
-    else cout << "PMS result: " << result << endl;
+    PMSAT(formula);
 }
 
 int main() {
