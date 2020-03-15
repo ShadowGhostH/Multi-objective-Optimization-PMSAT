@@ -174,13 +174,15 @@ private:
 	
 	int unit_propagate(Formula &);	// performs unit propagation
 	int apply_transform(Formula &, int);// applies the value of the literal
-	void display(Formula &, int);	// display the result
     void PMSAT(Formula);        // performs branch and bound methods recursively
-    int judge_pareto(Formula, Formula);// judge domainate relationship between formulas 
-    void add_answer(Formula);
-    
+
     // performs remove satisfied clauses or unsatisfied clauses
     int judge_clause(Formula &, int &, int &, int &, bool);
+    int judge_pareto(Formula, Formula);// judge domainate relationship between formulas 
+
+	void display(Formula &, int);	// display the result
+    void add_answer(Formula);
+    void print_answer();
 
 public:
 	PMSATSolver() {}
@@ -474,13 +476,45 @@ void PMSATSolver::PMSAT(Formula f){
     // return lower_bound;
 }
 
+void PMSATSolver::print_answer() {
+    cout << endl << "******** answer ***********" << endl;
+    for(int i = 0; i < pareto_front.size(); i++){
+        cout << "SAT: " << i << endl;
+        Formula f = pareto_front[i];
+        for (int i = 0; i < f.literals.size(); i++) {
+            if (i != 0) {
+                cout << " ";
+            }
+            if (f.literals[i] != -1) {
+                cout << pow(-1, f.literals[i]) * (i + 1);
+            } else {  
+                // for literals which can take either value, 
+                // arbitrarily assign them to be true
+                cout << (i + 1);
+            }
+        }
+        cout << " 0" << endl; 
+        cout << "Costs:" << endl;
+        for(int i = 0; i < cost_category_count; i++){
+            if(i != 0){
+                cout << " ";
+            }
+            cout << f.opt_cost[i];
+        }
+        cout << endl;
+    }
+    cout << "****************************" << endl << endl;
+
+}
+
 void PMSATSolver::solve(){
+    initialize();    // initialize
     PMSAT(formula);
+    print_answer();
 }
 
 int main() {
     PMSATSolver solver;     // create the solver
-    solver.initialize();    // initialize
     solver.solve();         // solve
     return 0;
 }
