@@ -136,7 +136,6 @@ void Formula::input(int hard_clause_count, int soft_clause_count, int cost_categ
         for(int j = 0; j < soft_clause_count; j++){
             cin >> soft_clause_cost[i][j];   // cost of each soft clause
             sum_soft_cost[i] += soft_clause_cost[i][j];
-            cout << "soft_clause_cost " << i << " " << j << " " << soft_clause_cost[i][j] <<  endl;
         }
     }
     
@@ -232,6 +231,10 @@ void PMSATSolver::initialize() {
  *                 Cat::normal - normal exit
  */
 int PMSATSolver::unit_propagate(Formula &f) {
+    cout << "call unit_propagate" << endl;
+    if(f.clauses[0].size() == 0 && f.clauses[1].size() == 0){
+        return Cat::satisfied;
+    }
     // stores whether the current iteration found a unit clause
     bool unit_clause_found = false; 
     if (f.clauses[0].size() == 0 && f.clauses[1].size() == 0) {	
@@ -251,7 +254,7 @@ int PMSATSolver::unit_propagate(Formula &f) {
                 // once assigned, reset the frequency to mark it closed
                 f.literal_frequency[f.clauses[0][i][0] / 2] = -1; 
                 // apply this change through f
-                cout << "unit_propagate: " << endl;
+                cout << "call apply_transform in unit_propagate: " << endl;
                 int result = apply_transform(f, f.clauses[0][i][0] / 2); 
                 // if this caused the formula to be either satisfied 
                 // or unsatisfied, return the result flag
@@ -284,7 +287,8 @@ int PMSATSolver::unit_propagate(Formula &f) {
 int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
     // the value to apply, 0 - if true, 1 - if false
     int value_to_apply = f.literals[literal_to_apply]; 
-    cout << "Apply: " << literal_to_apply << " " << value_to_apply << endl;
+    cout << "Apply: " << (literal_to_apply + 1)  << " " 
+        << (value_to_apply==0?"true":"false") << endl;
     for (int p = 0; p < 2; p++) {
         // iterate over the hard clauses in f
         for (int i = 0; i < f.clauses[p].size(); i++) {
@@ -305,6 +309,8 @@ int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
                 } else if (f.clauses[p][i][j] / 2 == literal_to_apply) {
                     cout << "Apply unsatisfied" << endl;
                     int judge_result = judge_clause(f, p, i, j, false);
+                    cout << "judge in judge_clause:  " << judge_result << endl;
+                    cout << "i; " << i << "  size_i: " << f.clauses[p].size() << endl;
                     if(judge_result == Cat::unsatisfied){
                         return judge_result;
                     }
@@ -346,17 +352,13 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
         if (p == 1){  // soft clause
             for(int k = 0; k < cost_category_count; k++){
                 // add clause cost to opt_cost
-                cout << "remove cluase cost" << k << " " << i << endl;
+                cout << "remove clause cost " << k << " " << i << endl;
                 f.opt_cost[k] += f.soft_clause_cost[k][i];
                 // remove the clause cost from the list
                 f.soft_clause_cost[k].erase(f.soft_clause_cost[k].begin() + i);
             }
         }
         i--;                // reset iterator
-        // if all hard and soft clauses have been removed
-        if (f.clauses[0].size() == 0 && f.clauses[1].size() == 0 ) { 
-            return Cat::satisfied;  // the formula is satisfied
-        }
     } else {
         // the literal appears with opposite polarity 
         // remove the literal from the clause, as it is false in it
@@ -366,6 +368,7 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
             if(p == 0){
                 // if the hard clause is empty
                 // formula is unsatisfiable currently
+                cout << "hard clause unsatisfied" << endl;
                 return Cat::unsatisfied;
             }  else {
                 for(int k = 0; k < cost_category_count; k++){
@@ -375,11 +378,14 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
                     f.remove_cost[k] += f.soft_clause_cost[k][i];
                     // remove the clause cost from the list
                     f.soft_clause_cost[k].erase(f.soft_clause_cost[k].begin() + i);
-                    i--;
                 }
+                i--;
             }
         }
-
+    }
+    // if all hard and soft clauses have been removed
+    if (f.clauses[0].size() == 0 && f.clauses[1].size() == 0 ) { 
+        return Cat::satisfied;  // the formula is satisfied
     }
     return Cat::normal;
 }
@@ -388,6 +394,7 @@ void PMSATSolver::add_answer(Formula f){
     if (pareto_front.empty()) {
         cout << "--------------" << endl;
         pareto_front.push_back(f);
+        print_answer();
         cout << "--------------" << endl;
         return;
     }
@@ -430,7 +437,7 @@ void PMSATSolver::display(Formula &f, int result) {
     } else { // if the formula is unsatisfiable
         cout << "UNSAT";
     }
-    cout << "***************************" << endl << endl;
+    cout << "****************************" << endl << endl;
 }
 
 /* 
@@ -441,15 +448,16 @@ void PMSATSolver::display(Formula &f, int result) {
  *               inf - no satisfiable solution
  */
 void PMSATSolver::PMSAT(Formula f){
-    cout << "PMSAT: ++++++++" << endl;
+    cout << "call  PMSAT: " << endl;
     // purning process
 	// lower_bound is the optimalcomplete solution initialized to -inf
 	// upper_bound is number of empty clause in f at most
     // int upper_bound = ;
     // if(upper_bound <= lower_bound) return lower_bound;
    
+    cout << "call unit_propagate in PMSAT" << endl;
     int result = unit_propagate(f); // perform unit propagation on the formula 
-    // to store empty soft clause number
+    cout << "return from unit_propagate to PMSAT" << endl;
     
     if(result == Cat::satisfied) {  // if satisfied, show result and return
         // int ans = f.opt_cost;
@@ -473,9 +481,10 @@ void PMSATSolver::PMSAT(Formula f){
         new_f.literals[i] = j;  // assign positive first
         new_f.literal_frequency[i] = -1; 
         // reset the frequency to -1 to ignore in the future
+        cout << "call apply_transform in PMSAT" << endl;
         int transform_result = apply_transform(new_f, i); 
+        cout << "return from apply_transform to PMSAT" << endl;
 
-        cout << "Apply result: " << transform_result << endl;
         // int ret = new_f.opt_cost;
         // apply the change to all the clauses
         if (transform_result == Cat::satisfied) { 
@@ -488,17 +497,10 @@ void PMSATSolver::PMSAT(Formula f){
         } else if(transform_result == Cat::unsatisfied) {
             continue;
         } else if(transform_result == Cat::normal) {
+            cout << "call PMSAT in PMSAT" << endl;
             PMSAT(new_f);
+            cout << "return from PMSAT to PMSAT" << endl;
         }
-        // else if (transform_result == Cat::unsatisfied) { 
-        //    // if formula not satisfied in this branch, return inf     
-        // } 
-        // else {
-        //     // after apply, there is not either satisfied or unsatisfied
-        //     // recursively call PMSAT on the new formula
-        //     // to update upper_bound
-        //    lower_bound = max(lower_bound, PMSAT(new_f, lower_bound));
-        //}
     }
     // return lower_bound;
 }
