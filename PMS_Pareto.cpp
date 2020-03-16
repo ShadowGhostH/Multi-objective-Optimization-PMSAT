@@ -381,7 +381,6 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
 void PMSATSolver::add_answer(Formula f){
     if (pareto_front.empty()) {
         pareto_front.push_back(f);
-        // print_answer();
         return;
     }
     bool flag = true;
