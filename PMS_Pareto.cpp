@@ -315,11 +315,16 @@ int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
 }
 
 /*
- * 
+ * Function to judge pareto relationship between two Formulas
+ * arguments - f1 & f2 two formulas
+ * return value:  Cat::domainating   f1 is domainating f2
+ *                Cat::domainated    f1 is domainted by f2
+ *                Cat::nondomainated there is no domainted relationship
  */
-
 int PMSATSolver::judge_pareto(Formula f1, Formula f2) {
     int cnt1 =0, cnt2 = 0;
+    // in this version, if f1 & f2 have same opt_cost for each cost categories
+    // return nondomainated to store both of them in pareto_front
     for(int i = 0; i < cost_category_count; i++){
         if(f1.opt_cost[i] >= f2.opt_cost[i]) cnt1++;
         if(f1.opt_cost[i] <= f2.opt_cost[i]) cnt2++;
@@ -378,19 +383,26 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
     return Cat::normal;
 }
 
+/*
+ * Function to judge if a feasible solution f can be added in pareto_front
+ */
 void PMSATSolver::add_answer(Formula f){
+    // if this is the first feasible solution add it to pareto_front
     if (pareto_front.empty()) {
         pareto_front.push_back(f);
         return;
     }
-    bool flag = true;
+    bool flag = true; // to represent if f is nondomainated 
     for(int i  = 0; i < pareto_front.size(); i++) {
+        // judge f with every feasible solution in pareto front
         int judge_result = judge_pareto(f, pareto_front[i]);
         if(judge_result == Cat::domainating) {
+            // if f is domainating a solution in pareto_front remove it
             pareto_front.erase(pareto_front.begin() + i);
             i--;
         } else if(judge_result == Cat::domainated){
             flag = false;
+            // break;    // is it right?
         }
     }
     if(flag == true){
@@ -407,18 +419,15 @@ void PMSATSolver::display(Formula &f, int result) {
     if (result == Cat::satisfied) { // if the formula is satisfiable
         cout << "SAT" << endl;
         for (int i = 0; i < f.literals.size(); i++) {
-            if (i != 0) {
-                cout << " ";
-            }
             if (f.literals[i] != -1) {
-                cout << pow(-1, f.literals[i]) * (i + 1);
+                cout << pow(-1, f.literals[i]) * (i + 1) << " ";
             } else {  
                 // for literals which can take either value, 
                 // arbitrarily assign them to be true
-                cout << (i + 1);
+                cout << (i + 1) << " ";
             }
         }
-        cout << " 0" << endl; 
+        cout << "0" << endl; 
         
         cout << "costs:";
         for(int i = 0; i < cost_category_count; i++) {
