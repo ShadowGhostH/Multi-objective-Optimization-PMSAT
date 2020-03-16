@@ -516,8 +516,11 @@ void PMSATSolver::PMSAT(Formula f){
 
 void PMSATSolver::print_answer() {
     cout << endl << "******** answer ***********" << endl;
+    if(pareto_front.empty()) {
+        cout << "UNSAT" << endl;
+    }
     for(int i = 0; i < pareto_front.size(); i++){
-        cout << "SAT: " << i << endl;
+        cout << "SAT: " << (i + 1) << endl;
         Formula f = pareto_front[i];
         for (int i = 0; i < f.literals.size(); i++) {
             if (i != 0) {
