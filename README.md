@@ -6,7 +6,7 @@ Multi-objective Optimization Pareto-Front
 
 ## Cat
 
-用 $enum$ 存放函数的返回状态，其中
+用 enum 存放函数的返回状态，其中
 
 **satisfied**  - 用于表示 PMS 中 hard clauses 全部满足，以及 soft clauses 全部验证完毕的状态
 
@@ -138,13 +138,13 @@ int PMSAT(Formula, int);
 
 > **Algorithm**  PMSAT(f)
 >
-> **Input: ** f - PMSAT 实例
+> **Input:** f - PMSAT 实例
 >
 > **Algorithm：**
 > 
->unit\_propagate(f)
+> unit\_propagate(f)
 > 
->**if**  satisfied  **then** add_answer(f) **return** 
+> **if**  satisfied  **then** add_answer(f) **return** 
 > 
 > **if**  unsatisfied **then return**   
 > 
@@ -154,7 +154,7 @@ int PMSAT(Formula, int);
 > 
 > PMSAT(f_l,lower\_bound)​   PMSAT(f_{\bar{l}}, lower_bound)​   (分支)
 > 
-> **return** $\max$ 
+> **return** 
 > 
 
 
