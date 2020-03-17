@@ -1,5 +1,5 @@
 /* 
- * Program to implement a Patrial Max SAT solver
+ * Program to implement a Partial Max SAT solver
  * branch and bound method
  */
 
@@ -24,9 +24,9 @@ enum Cat {
 				// has exited normally
     
     // in Pareto Function to represent domainate relationship
-    domainating,    // A domainate B
-    domainated,     // A is domainted by B
-    nondomainated,  // there is none domainated relationship between A and B
+    dominating,    // A dominate B
+    dominated,     // A is dominted by B
+    nondominated,  // there is none dominated relationship between A and B
 };
 
 /*
@@ -330,13 +330,13 @@ int PMSATSolver::judge_pareto(Formula f1, Formula f2) {
         if(f1.opt_cost[i] <= f2.opt_cost[i]) cnt2++;
     }
     if(cnt1 == cost_category_count && cnt2 == cost_category_count){
-        return Cat::nondomainated;
+        return Cat::nondominated;
     } else if(cnt1 == cost_category_count){
-        return Cat::domainating;
+        return Cat::dominating;
     } else if(cnt2 == cost_category_count){
-        return Cat::domainated;
+        return Cat::dominated;
     } else {
-        return Cat::nondomainated;
+        return Cat::nondominated;
     }
 }
 
@@ -396,11 +396,11 @@ void PMSATSolver::add_answer(Formula f){
     for(int i  = 0; i < pareto_front.size(); i++) {
         // judge f with every feasible solution in pareto front
         int judge_result = judge_pareto(f, pareto_front[i]);
-        if(judge_result == Cat::domainating) {
+        if(judge_result == Cat::dominating) {
             // if f is domainating a solution in pareto_front remove it
             pareto_front.erase(pareto_front.begin() + i);
             i--;
-        } else if(judge_result == Cat::domainated){
+        } else if(judge_result == Cat::dominated){
             flag = false;
             // break;    // is it right?
         }
