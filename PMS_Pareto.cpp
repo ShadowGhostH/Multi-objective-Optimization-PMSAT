@@ -183,6 +183,7 @@ private:
     // performs remove satisfied clauses or unsatisfied clauses
     int judge_clause(Formula &, int &, int &, int &, bool);
     int judge_pareto(Formula, Formula);// judge domainate relationship between formulas 
+    bool judge_purning(Formula);    // judge the purning process
 
 	void display(Formula &, int);	// display the result
     void add_answer(Formula);
@@ -383,6 +384,21 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
     return Cat::normal;
 }
 
+bool PMSATSolver::judge_purning(Formula f) {
+    if(pareto_front.empty()) {
+        return true;
+    }
+    for(int i = 0; i < pareto_front.size(); i++){
+        for(int k = 0; k < cost_category_count; k++){
+            int max_cost = f.sum_soft_cost[k] - f.remove_cost[k];
+            if(max_cost >= pareto_front[i].opt_cost[k]){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 /*
  * Function to judge if a feasible solution f can be added in pareto_front
  */
@@ -465,6 +481,10 @@ void PMSATSolver::PMSAT(Formula f){
     } else if(result == Cat::unsatisfied) { // if hard clauses not satisfied
         return;                // return -inf
     }
+
+    if(judge_purning(f) == false) { // purning process
+        return;
+    }  
     
     // find the variable with maximum frequency in f, which will be the next to be
     // assigned a value already assigned variables have this field reset to -1 in
