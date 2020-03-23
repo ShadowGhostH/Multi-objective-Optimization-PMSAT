@@ -217,6 +217,8 @@ void PMSATSolver::initialize() {
 	cin >> soft_clause_count;
     cin >> cost_category_count;
 
+    pareto_front.clear();
+
 	formula.initialize(literal_count, hard_clause_count, soft_clause_count,
             cost_category_count);
 	
