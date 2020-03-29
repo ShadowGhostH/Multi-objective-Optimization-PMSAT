@@ -24,7 +24,7 @@ enum Cat {
     normal,		// when no satisfying assignment has been found till now, and DPLL()
 				// has exited normally
     
-    // in Pareto Function to represent domainate relationship
+    // in Pareto Function to represent dominate relationship
     dominating,    // A dominate B
     dominated,     // A is dominted by B
     nondominated,  // there is none dominated relationship between A and B
@@ -183,7 +183,7 @@ private:
 
     // performs remove satisfied clauses or unsatisfied clauses
     int judge_clause(Formula &, int &, int &, int &, bool);
-    int judge_pareto(Formula, Formula);// judge domainate relationship between formulas 
+    int judge_pareto(Formula, Formula);// judge dominate relationship between formulas 
     bool judge_purning(Formula);    // judge the purning process
 
 	void display(Formula &, int);	// display the result
@@ -321,21 +321,21 @@ int PMSATSolver::apply_transform(Formula &f, int literal_to_apply) {
 /*
  * Function to judge pareto relationship between two Formulas
  * arguments - f1 & f2 two formulas
- * return value:  Cat::domainating   f1 is domainating f2
- *                Cat::domainated    f1 is domainted by f2
- *                Cat::nondomainated there is no domainted relationship
+ * return value:  Cat::dominating   f1 is dominating f2
+ *                Cat::dominated    f1 is dominted by f2
+ *                Cat::nondominated there is no dominted relationship
  */
 int PMSATSolver::judge_pareto(Formula f1, Formula f2) {
     int cnt1 =0, cnt2 = 0;
-    // in this version, if f1 & f2 have same opt_cost for each cost categories
-    // return nondomainated to store both of them in pareto_front
+    // upd: in this version, if f1 & f2 have same opt_cost for all cost categories
+    // function will return f1 dominate f2 to make sure there will be only one formula
+    // with these value in pareto front
     for(int i = 0; i < cost_category_count; i++){
         if(f1.opt_cost[i] >= f2.opt_cost[i]) cnt1++;
         if(f1.opt_cost[i] <= f2.opt_cost[i]) cnt2++;
     }
-    if(cnt1 == cost_category_count && cnt2 == cost_category_count){
-        return Cat::nondominated;
-    } else if(cnt1 == cost_category_count){
+
+    if(cnt1 == cost_category_count){
         return Cat::dominating;
     } else if(cnt2 == cost_category_count){
         return Cat::dominated;
@@ -387,6 +387,10 @@ int PMSATSolver::judge_clause(Formula &f, int &p, int &i, int &j, bool flag){
     return Cat::normal;
 }
 
+/*
+ * Function to jduge if this current node with formula f 
+ * with the max cost may dominate any solution in pareto front
+ */
 bool PMSATSolver::judge_purning(Formula f) {
     if(pareto_front.empty()) {
         return true;
@@ -394,7 +398,9 @@ bool PMSATSolver::judge_purning(Formula f) {
     for(int i = 0; i < pareto_front.size(); i++){
         for(int k = 0; k < cost_category_count; k++){
             int max_cost = f.sum_soft_cost[k] - f.remove_cost[k];
-            if(max_cost >= pareto_front[i].opt_cost[k]){
+            // upd: in this version only max_cost is larger than 
+            // any solution in pareto_front
+            if(max_cost > pareto_front[i].opt_cost[k]){
                 return true;
             }
         }
@@ -411,17 +417,22 @@ void PMSATSolver::add_answer(Formula f){
         pareto_front.push_back(f);
         return;
     }
-    bool flag = true; // to represent if f is nondomainated 
+    bool flag = true; // to represent if f is nondominated 
     for(int i  = 0; i < pareto_front.size(); i++) {
         // judge f with every feasible solution in pareto front
         int judge_result = judge_pareto(f, pareto_front[i]);
+        // upd: in this version, for different solution with same value of each 
+        // cost categories, we only add one in pareto front
         if(judge_result == Cat::dominating) {
-            // if f is domainating a solution in pareto_front remove it
+            // if f is dominating a solution in pareto_front remove it
             pareto_front.erase(pareto_front.begin() + i);
             i--;
         } else if(judge_result == Cat::dominated){
             flag = false;
-            // break;    // is it right?
+            // if formula f is dominated by any solution in pareto front
+            // named f2, it means every solution in pareto front is nondominated by
+            // f2, hence that is nondominated by f
+            break; 
         }
     }
     if(flag == true){
@@ -432,6 +443,7 @@ void PMSATSolver::add_answer(Formula f){
 /*
  * Function to display literal satisfied or unsatisfied
  * arguments: f - formula 
+ *            result - satisfied or unsatisfied
  */
 void PMSATSolver::display(Formula &f, int result) {
     cout << endl << "******** display ***********" << endl;
