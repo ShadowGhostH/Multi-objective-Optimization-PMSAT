@@ -8,6 +8,7 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <ctime>
 using namespace std;
 
 const int inf = 0x3f3f3f3f; // value of infinite 
@@ -476,7 +477,7 @@ void PMSATSolver::PMSAT(Formula f){
     
     if(result == Cat::satisfied) {  // if satisfied, show result and return
         // int ans = f.opt_cost;
-        display(f, result);
+        // display(f, result);
         // return ans;         // answer is lower bound 
         add_answer(f); 
         return;
@@ -506,7 +507,7 @@ void PMSATSolver::PMSAT(Formula f){
         if (transform_result == Cat::satisfied) { 
             // if formula satisfied both hard and soft clause
             // meas all literal has been selected
-            display(new_f, transform_result);
+            // display(new_f, transform_result);
             add_answer(new_f);
             // lower_bound = max(lower_bound);
         } else if(transform_result == Cat::unsatisfied) {
@@ -551,8 +552,11 @@ void PMSATSolver::print_answer() {
 
 void PMSATSolver::solve(){
     initialize();    // initialize
+    clock_t startTime,endTime;
     PMSAT(formula);
+    endTime = clock();
     print_answer();
+    cout << "The run time is: " <<(double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
 }
 
 int main() {
