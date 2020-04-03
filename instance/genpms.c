@@ -1,26 +1,24 @@
 /******************************************************************/
-/*                         gensatandre.c                          */
+/*                           genpmx.c                             */
 /******************************************************************/
-/*       Generation d'une donnee r-SAT aleatoire "in.dat"         */
-/*           参数形式: ./gencnf+ n m k s1 s2					  */
-/*      different k-sat instances of n variables, m clauses		  */
-/*                with seeds from s1 to s2						  */
+/*         参数形式: ./genpms n hc sc k c s1 s2					  */
+/*    different k-sat instances of n variables, hc hard clauses   */
+/*    sc soft clauses c different cost with seeds from s1 to s2   */
 /******************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-//#include "./randdd.h"
 
 const unsigned int maxn = 10;
 
-long int NbVar;			/* valeur du nombre de variables */
-long int NbClause;			/* valeur du nombre de clauses */
+long int NbVar;			
+long int NbClause;
 long int HClause;
 long int SClause;
-long int KSat;			/* valeur de la longueur des clauses */
+long int KSat;	
 long int costCnt;
-long int **SAT;			/* matrice PxR des variables par clause */
+long int **SAT;	
 long int **Cost;
 long int *Var;
 FILE *f;
@@ -58,8 +56,6 @@ FILE *f;
 /* trirange(n)    -- return a value in the range 0..n-1                */
 /* trigauss       -- return values from gaussian normal distribution   */
 /* triexp         -- return values from exponential distribution       */
-/*                                                                     */
-/* This compiles using gcc, and uses the 64-bit long long type.        */
 
 unsigned int streammwc(unsigned int);
 void triseed(char *);
@@ -345,42 +341,6 @@ double triexp() {
 
 /* Seed the generator, demonstrate the different functions,
     and create a diehard test file */
-
-/*
-int main() {
-    FILE *out;
-    int i,j;
-    unsigned int a[1000];
-
-    randomize();
-    printf("4 values from each stream\n");
-    for(i = 0; i < 16; i++) 
-        printf("%u %u %u %u\n",
-            streammwc(i), streammwc(i), streammwc(i), streammwc(i));
-    printf("gen1\n");
-    for(i = 0; i < 10; i++) printf("%u\n",gen1());
-    printf("gen2\n");
-    for(i = 0; i < 10; i++) printf("%u\n",gen2());
-    printf("10 32-bit values\n");
-    for(i = 0; i < 10; i++) printf("%u\n",trirand());
-    printf("10 uni values\n");
-    for(i = 0; i < 10; i++) printf("%lf\n",triuni());
-    printf("10 values in the range 0..99\n");
-    for(i = 0; i < 10; i++) printf("%u\n",trirange(100));
-    printf("10 normal values\n");
-    for(i = 0; i < 10; i++) printf("%lf\n",trigauss());
-    printf("10 exponential values\n");
-    for(i = 0; i < 10; i++) printf("%lf\n",triexp());
-    printf("Creating a diehard test file....\n");
-    out = fopen("tri.out","w");
-    for(i = 0; i < 3000; i++) {
-        for(j = 0; j < 1000; j++) a[j] = trirand();
-        fwrite(a,4,1000,out);
-    }
-    fclose(out);
-    return 0;
-}
-*/
 
 /**************************************************************/
 int main (argc, argv)

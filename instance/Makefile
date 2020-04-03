@@ -4,7 +4,6 @@ EXEC = gencnf+
 
 all:
 	@echo "Building gencnf ..."
-	$(CC) $(FLAGS) gencnf+.c -O3 -o $(EXEC) -lm
 	$(CC) $(FLAGS) genpms.c -O3 -o genpms -lm
 	@echo "Done."
 
